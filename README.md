@@ -84,6 +84,9 @@ pet/
 ├── pet.py              # 主程序（overlay 悬浮窗 + 触摸交互 + 动画）
 ├── pet-ctl.sh          # 一键管理脚本（start/stop/restart/status）
 ├── pet-status.sh       # 状态更新脚本
+├── skills/             # agent 交互技能（SKILL.md 标准格式）
+│   └── qiki-desktop-pet-agent/
+│       └── SKILL.md    # agent 配合协议：状态气泡 + 生命周期管理
 ├── skins/              # 皮肤目录
 │   └── default/        # 默认皮肤（琪琪）
 │       ├── normal_1.png / normal_2.png
@@ -128,6 +131,24 @@ bash pet-ctl.sh status     # 查看运行状态
   （脚本会注入 wrapper PATH、防重复启动、stop 时清状态）
 - 状态文件位置：`~/hermes11/pet-status.txt`（桌宠硬编码轮询这个路径，
   修改需同步改 pet.py 的 STATUS_FILE）
+
+### Agent 交互 Skill（可直接给 agent 加载）
+
+仓库内置标准 Hermes skill，让任意 agent（琪琪/其他）快速学会怎么配合桌宠：
+
+```
+skills/qiki-desktop-pet-agent/SKILL.md
+```
+
+内容包括：
+- 状态更新协议（pet-status.sh 用法与规则）
+- 生命周期管理（pet-ctl.sh start/stop/restart/status）
+- 典型流程示例（start → 更新状态 → 干活 → 清状态）
+- 常见坑（裸跑 pet.py、忘清状态、改错状态文件路径等）
+
+给 agent 加载方式（Hermes）：把 skill 复制/链接到
+`~/.hermes/skills/` 下，或在 agent 提示词里引用本项目 README 的
+「配合 AI Agent 使用」章节即可。
 
 ## 技术路线
 
