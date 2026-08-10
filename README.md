@@ -92,6 +92,54 @@ pet/
 └── pet-debug.log       # 调试日志（运行时生成，已 gitignore）
 ```
 
+## 技术路线
+
+从下往上拆解（全链路不依赖 X11，纯安卓原生控件）：
+
+```
+┌─────────────────────────────────────────────┐
+│ 插件层：skins/<皮肤名>/ 帧图 + config.json    │
+│          换肤 = 换目录，不改代码               │
+├─────────────────────────────────────────────┤
+│ 状态层：轮询 ~/hermes11/pet-status.txt        │
+│          (0.6s/次，内容变化显示到气泡)         │
+├─────────────────────────────────────────────┤
+│ 交互层：overlayTouch 事件 {x,y,action}        │
+│          down→拖动起点 / move→setposition 移动 │
+│          up→距离≤20px 判点击（1~2次开心,≥3哭）│
+├─────────────────────────────────────────────┤
+│ 渲染层：ImageView 帧动画（normal 两帧呼吸,     │
+│          happy/cry 状态帧，字节流 setimage）   │
+├─────────────────────────────────────────────┤
+│ 窗口层：overlay 悬浮窗（系统级置顶、透明背景,   │
+│          不占任务栈；0.1.6 构造 bug 手动绕过）  │
+├─────────────────────────────────────────────┤
+│ 通信层：termux-gui Python 库 → termux-am      │
+│          广播 → Termux:GUI App → 系统控件      │
+└─────────────────────────────────────────────┘
+```
+
+- **通信层**：termuxgui 库通过 termux-am 广播（Binder）与安卓端
+  Termux:GUI App 通信，由 App 创建窗口/控件。termux-app 的 am.sock
+  服务未启用，故用 wrapper 直连系统 am 命令绕过。
+- **窗口层**：`newActivity(overlay=true)` 创建系统级悬浮窗：置顶显示、
+  背景透明、不占任务栈 —— 这是桌宠能浮在任意界面上方的原因。
+  termux-gui 0.1.6 有构造 bug（overlay 无 Task 只返回 aid 整数，
+  库假定返回 (aid, tid)），代码里手动构造 Activity 绕过。
+- **渲染层**：normal_1/normal_2 两张 PNG 每 0.5s 切换 = 呼吸动画；
+  happy.png / cry.png 为状态帧，图片以字节流 setimage 进 ImageView。
+- **交互层**：overlayTouch 事件格式 `{x, y, action}`（屏幕绝对坐标），
+  主循环非阻塞轮询：down 记录起点开始拖动 → move 计算位移
+  setposition 移动窗口 → up 判断移动距离 ≤20px 算点击，
+  计数 1~2 次触发开心反应，≥3 次触发委屈哭哭。
+- **状态层**：每 0.6s 读状态文件 pet-status.txt，内容变化即显示到
+  气泡 TextView，实现"琪琪正在做 XXX"的实时状态。
+- **插件层**：皮肤目录约定 skins/<皮肤名>/ 放帧图 + config.json
+  （气泡文案），换肤 = 换目录，零代码改动。
+
+一句话总结：Python 进程 + termux-gui 广播协议 + Android overlay
+悬浮窗 + 图片帧动画 + 触摸事件 + 文件轮询。
+
 ## 已知问题与实现要点
 
 - termux-gui 0.1.6 的 overlay Activity 构造有 bug（库假定 newActivity 返回
