@@ -8,12 +8,12 @@
 ## 功能特性
 
 - 🖼️ 悬浮窗桌宠：overlay 置顶显示，不遮挡操作
-- 🐱 呼吸动画：normal_1 / normal_2 两帧循环，形象活灵活现
+- 🐱 动画皮肤：支持 GIF 动画（Pillow 拆帧、按原帧速循环播放），也兼容 PNG 双帧呼吸动画
 - ✋ 触摸拖动：按住桌宠随意移动位置
-- 😊 点击互动：点 1~2 下 → 开心反应（举手跳一下 + 气泡）
-- 😭 连点惩罚：连续点 3 下以上 → 委屈哭哭（哭脸 + 气泡，5 秒后恢复）
+- 😊 点击互动：点 1~2 下 → 开心反应（GIF 开心动画 + 气泡，播完一轮回待机）
+- 😭 连点惩罚：连续点 3 下以上 → 委屈哭哭（GIF 哭哭动画 + 气泡，5 秒后恢复）
 - 💬 任务状态：轮询状态文件实时显示琪琪正在做什么
-- 🎨 皮肤插件化：换皮只需换目录，不用改代码
+- 🎨 皮肤插件化：换皮只需换目录（GIF 或 PNG 帧均可），不用改代码
 
 ## 环境要求
 
@@ -93,9 +93,14 @@ pet/
 │   └── qiki-desktop-pet-agent/
 │       └── SKILL.md    # agent 配合协议：状态气泡 + 生命周期管理
 ├── skins/              # 皮肤目录
-│   └── default/        # 默认皮肤（琪琪）
-│       ├── normal_1.png / normal_2.png
-│       ├── happy.png / cry.png
+│   ├── default/        # 默认皮肤（琪琪，PNG 帧呼吸动画）
+│   │   ├── normal_1.png / normal_2.png
+│   │   ├── happy.png / cry.png
+│   │   └── config.json
+│   └── qiki/           # GIF 动画皮肤（三张 GIF 拆帧播放）
+│       ├── normal.gif  # 待机动画（80 帧循环）
+│       ├── happy.gif   # 开心动画（点击播放）
+│       ├── cry.gif     # 哭哭动画（连点播放）
 │       └── config.json
 └── pet-debug.log       # 调试日志（运行时生成，已 gitignore）
 ```
@@ -171,8 +176,8 @@ skills/qiki-desktop-pet-agent/SKILL.md
 │          down→拖动起点 / move→setposition 移动 │
 │          up→距离≤20px 判点击（1~2次开心,≥3哭）│
 ├─────────────────────────────────────────────┤
-│ 渲染层：ImageView 帧动画（normal 两帧呼吸,     │
-│          happy/cry 状态帧，字节流 setimage）   │
+│ 渲染层：ImageView 帧动画（GIF 拆帧按原速循环,  │
+│          PNG 帧兼容，字节流 setimage）         │
 ├─────────────────────────────────────────────┤
 │ 窗口层：overlay 悬浮窗（系统级置顶、透明背景,   │
 │          不占任务栈；0.1.6 构造 bug 手动绕过）  │
@@ -189,8 +194,10 @@ skills/qiki-desktop-pet-agent/SKILL.md
   背景透明、不占任务栈 —— 这是桌宠能浮在任意界面上方的原因。
   termux-gui 0.1.6 有构造 bug（overlay 无 Task 只返回 aid 整数，
   库假定返回 (aid, tid)），代码里手动构造 Activity 绕过。
-- **渲染层**：normal_1/normal_2 两张 PNG 每 0.5s 切换 = 呼吸动画；
-  happy.png / cry.png 为状态帧，图片以字节流 setimage 进 ImageView。
+- **渲染层**：皮肤帧动画——有 GIF 时用 Pillow 拆帧、按 GIF 自带帧时长循环
+  播放（qiki 皮肤 normal.gif 80 帧/3.2s 待机循环），无 GIF 时退回
+  normal_1/normal_2 双帧 0.5s 呼吸动画；happy/cry 状态动画播完一轮
+  自动回待机。图片以字节流 setimage 进 ImageView。
 - **交互层**：overlayTouch 事件格式 `{x, y, action}`（屏幕绝对坐标），
   主循环非阻塞轮询：down 记录起点开始拖动 → move 计算位移
   setposition 移动窗口 → up 判断移动距离 ≤20px 算点击，
