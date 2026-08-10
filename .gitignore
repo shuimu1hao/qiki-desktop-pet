@@ -1,0 +1,14 @@
+# 运行时产物
+pet-debug.log
+pet-run.log
+pet-status.txt
+
+# Python
+__pycache__/
+*.pyc
+
+# 系统
+bin/
+pet-debug.log
+pet-run.log
+README-恢复备忘.md
