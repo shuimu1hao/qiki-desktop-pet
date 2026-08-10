@@ -12,10 +12,11 @@
 
 ┌─ 皮肤插件接口 ─────────────────────────────┐
 │ skins/<皮肤名>/                             │
-│   normal_1.png normal_2.png  (呼吸动画帧,必填)│
-│   blink.png      (眨眼帧,可选)               │
-│   happy.png      (开心帧,可选)               │
-│   cry.png        (哭哭帧,可选)               │
+│   normal.gif      (待机动画, 与PNG二选一)     │
+│   happy.gif       (开心动画, 可选)            │
+│   cry.gif         (哭哭动画, 可选)            │
+│   normal_1.png normal_2.png (呼吸帧,旧格式)   │
+│   happy.png cry.png blink.png (单帧,旧格式)   │
 │   config.json    (气泡文字/时长,可选)         │
 │ 用法: python3 pet.py [--skin <皮肤名>]       │
 └─────────────────────────────────────────────┘
@@ -26,6 +27,9 @@ import os
 import sys
 import json
 import time
+import io
+
+from PIL import Image, ImageSequence
 
 from termuxgui import (Activity, Connection, ImageView, TextView,
                        LinearLayout, Event)
@@ -68,13 +72,42 @@ class Skin:
                     self.cfg.update(json.load(f))
             except Exception:
                 pass
-        self.normal = self._load_list(["normal_1.png", "normal_2.png"])
+        self.normal, self.normal_delays = self._load_anim("normal")
         self.blink = self._load_one("blink.png")
-        self.happy = self._load_one("happy.png")
-        self.cry = self._load_one("cry.png")
+        self.happy, self.happy_delays = self._load_anim("happy")
+        self.cry, self.cry_delays = self._load_anim("cry")
 
     def _path(self, fn):
         return os.path.join(self.dir, fn)
+
+    def _load_anim(self, stem):
+        """加载动画帧序列。
+
+        优先 <stem>.gif（拆帧 → PNG 字节列表 + 每帧时长秒）；没有 GIF 时
+        兼容旧格式：normal_1.png / normal_2.png（呼吸双帧）或 <stem>.png 单帧。
+        """
+        gif_path = self._path(stem + ".gif")
+        if os.path.isfile(gif_path):
+            frames, delays = [], []
+            try:
+                im = Image.open(gif_path)
+                for f in ImageSequence.Iterator(im):
+                    delay = f.info.get("duration", 40) / 1000.0
+                    if delay <= 0:
+                        delay = 0.04
+                    buf = io.BytesIO()
+                    f.convert("RGBA").save(buf, format="PNG")
+                    frames.append(buf.getvalue())
+                    delays.append(delay)
+            except Exception:
+                frames, delays = [], []
+            if frames:
+                return frames, delays
+        names = [f"{stem}_1.png", f"{stem}_2.png"] if stem == "normal" else [f"{stem}.png"]
+        frames = self._load_list(names)
+        if frames:
+            return frames, [ANIM_SEC] * len(frames)
+        return [], []
 
     def _load_list(self, names):
         out = []
@@ -181,6 +214,7 @@ def main():
     last_heartbeat = time.time()
     anim_i = 0
     last_anim = 0.0
+    state = "normal"          # normal / happy / cry（动画帧来源）
 
     def show_bubble(text, secs):
         nonlocal bubble_visible, happy_until
@@ -195,22 +229,31 @@ def main():
         bubble_visible = False
 
     def play_happy():
-        nonlocal happy_until, happy_idx
+        nonlocal happy_until, happy_idx, state, anim_i, last_anim
         happy_until = time.time() + HAPPY_SEC
         happy_idx = (happy_idx + 1) % len(skin.cfg["bubbles"])
         show_bubble(skin.cfg["bubbles"][happy_idx], HAPPY_SEC)
         if skin.happy:
-            set_img(img, skin.happy)
+            state = "happy"
+            anim_i = 0
+            last_anim = 0.0
+            set_img(img, skin.happy[0])
+            # GIF 动画时至少播完一轮再回呼吸态
+            happy_until = time.time() + max(HAPPY_SEC, sum(skin.happy_delays))
         a.setposition(wx, wy - JUMP_PX)
         time.sleep(0.12)
         a.setposition(wx, wy)
 
     def play_cry():
-        nonlocal cry_until, tap_count
+        nonlocal cry_until, tap_count, state, anim_i, last_anim
         cry_until = time.time() + CRY_SEC
         tap_count = 0
         if skin.cry:
-            set_img(img, skin.cry)
+            state = "cry"
+            anim_i = 0
+            last_anim = 0.0
+            set_img(img, skin.cry[0])
+            cry_until = time.time() + max(CRY_SEC, sum(skin.cry_delays))
         show_bubble(skin.cfg["cry_bubble"], CRY_SEC)
 
     while True:
@@ -271,12 +314,26 @@ def main():
         if bubble_visible and cry_until == 0 and now >= happy_until:
             hide_bubble()
 
-        # 呼吸动画（非开心/哭状态时循环 normal 帧）
-        if cry_until == 0 and happy_until < now and len(skin.normal) > 1:
-            if now - last_anim >= ANIM_SEC:
+        # 状态恢复：开心/哭哭动画播完 → 回到呼吸态
+        if state != "normal":
+            if (state == "happy" and now >= happy_until) or (state == "cry" and now >= cry_until):
+                state = "normal"
+                anim_i = 0
+                last_anim = 0.0
+
+        # 帧动画：按当前状态选帧序列 + 各自帧时长
+        if state == "happy" and len(skin.happy) > 1:
+            frames, delays = skin.happy, skin.happy_delays
+        elif state == "cry" and len(skin.cry) > 1:
+            frames, delays = skin.cry, skin.cry_delays
+        else:
+            frames, delays = skin.normal, skin.normal_delays
+        if len(frames) > 1:
+            d = delays[anim_i % len(delays)]
+            if now - last_anim >= d:
                 last_anim = now
-                anim_i = (anim_i + 1) % len(skin.normal)
-                set_img(img, skin.normal[anim_i])
+                anim_i = (anim_i + 1) % len(frames)
+                set_img(img, frames[anim_i])
 
         # 轮询状态文件
         if now - last_poll >= POLL_SEC:

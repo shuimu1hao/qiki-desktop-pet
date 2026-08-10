@@ -60,12 +60,17 @@ bash pet-ctl.sh start 泳装 # 指定皮肤启动
 
 | 文件 | 是否必填 | 说明 |
 |------|---------|------|
-| normal_1.png | ✅ | 呼吸动画帧 1 |
-| normal_2.png | ✅ | 呼吸动画帧 2 |
+| normal.gif | ✅（与 PNG 二选一） | 待机动画，运行时拆帧循环播放 |
+| happy.gif | ❌ | 开心动画（点击时播放，播完一轮回待机） |
+| cry.gif | ❌ | 哭哭动画（连点3下播放，播完一轮回待机） |
+| normal_1.png / normal_2.png | ✅（旧格式） | 呼吸动画帧（皮肤无 GIF 时使用） |
+| happy.png / cry.png | ❌（旧格式） | 开心/哭哭单帧（皮肤无 GIF 时使用） |
 | blink.png | ❌ | 眨眼帧（暂未启用） |
-| happy.png | ❌ | 开心帧（点击时显示） |
-| cry.png | ❌ | 哭哭帧（连点3下显示） |
 | config.json | ❌ | 气泡文字配置 |
+
+GIF 皮肤说明：直接放 `.gif` 动画即可（透明背景效果最好），程序用 Pillow
+拆帧后按 GIF 自带帧时长播放。GIF 与 PNG 混用也可，如只有 normal.gif 时
+happy/cry 会退回单帧或直接复用待机动画。
 
 config.json 示例：
 
