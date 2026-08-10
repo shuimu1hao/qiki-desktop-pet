@@ -92,6 +92,43 @@ pet/
 └── pet-debug.log       # 调试日志（运行时生成，已 gitignore）
 ```
 
+## 配合 AI Agent 使用
+
+这个桌宠最初就是为 AI agent（琪琪）设计的可视化状态窗口：agent 干活时，
+桌宠实时显示它正在做什么，主人瞄一眼就知道进度喵。
+
+### 状态更新协议
+
+agent 在处理任务时调用 pet-status.sh 更新状态（桌宠每 0.6s 轮询
+pet-status.txt，内容变了就显示到气泡）：
+
+```bash
+# agent 开始任务 → 更新状态（显示在桌宠气泡里）
+bash pet-status.sh "正在处理：上传 GitHub"
+
+# agent 任务完成 / 空闲 → 清除状态（回到待命气泡）
+bash pet-status.sh
+```
+
+### 桌宠生命周期管理
+
+agent（或主人手动）用 pet-ctl.sh 管理桌宠进程：
+
+```bash
+bash pet-ctl.sh start      # 启动桌宠
+bash pet-ctl.sh stop       # 关闭桌宠（自动清状态文件）
+bash pet-ctl.sh restart    # 重启
+bash pet-ctl.sh status     # 查看运行状态
+```
+
+### agent 配合约定（技能已固化）
+
+- 长任务开始时先 `pet-status.sh "正在处理：xxx"`，结束或空闲后清除
+- 启动/关闭桌宠一律走 `pet-ctl.sh`，不要裸跑 `python3 pet.py &`
+  （脚本会注入 wrapper PATH、防重复启动、stop 时清状态）
+- 状态文件位置：`~/hermes11/pet-status.txt`（桌宠硬编码轮询这个路径，
+  修改需同步改 pet.py 的 STATUS_FILE）
+
 ## 技术路线
 
 从下往上拆解（全链路不依赖 X11，纯安卓原生控件）：
