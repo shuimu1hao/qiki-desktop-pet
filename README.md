@@ -56,7 +56,9 @@ bash pet-ctl.sh start 泳装 # 指定皮肤启动
 
 ## 皮肤接口
 
-换肤 = 换目录，皮肤放在 `skins/<皮肤名>/`：
+换肤 = 换目录，皮肤放在 `skins/<皮肤名>/`。**制作皮肤/换肤的完整参考**
+（含 qiki GIF 动画模板的规格与制作步骤）见 `references/skin-plugin-guide.md`，
+下面只列接口摘要：
 
 | 文件 | 是否必填 | 说明 |
 |------|---------|------|
@@ -97,11 +99,14 @@ pet/
 │   │   ├── normal_1.png / normal_2.png
 │   │   ├── happy.png / cry.png
 │   │   └── config.json
-│   └── qiki/           # GIF 动画皮肤（三张 GIF 拆帧播放）
+│   └── qiki/           # GIF 动画皮肤（三张 GIF 拆帧播放，参考模板）
 │       ├── normal.gif  # 待机动画（80 帧循环）
 │       ├── happy.gif   # 开心动画（点击播放）
 │       ├── cry.gif     # 哭哭动画（连点播放）
+│       ├── README.md   # 皮肤规格自说明
 │       └── config.json
+├── references/         # 参考文档
+│   └── skin-plugin-guide.md  # 皮肤插件制作参考（含 qiki 模板规格）
 └── pet-debug.log       # 调试日志（运行时生成，已 gitignore）
 ```
 
