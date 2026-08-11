@@ -1,17 +1,19 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # 🐾 琪琪桌宠管理脚本 (=^･ω･^=)
 # 用法：
-#   bash pet-ctl.sh start   启动桌宠
+#   bash pet-ctl.sh start   启动桌宠（默认 qiki 皮肤）
 #   bash pet-ctl.sh stop    关闭桌宠
 #   bash pet-ctl.sh restart 重启桌宠
 #   bash pet-ctl.sh status  查看运行状态
 #
+# 换肤：
+#   bash pet-ctl.sh start 泳装    # 指定皮肤
 # 日志：~/hermes11/pet/pet-run.log
 # 状态：~/hermes11/pet/pet-status.txt（显示在桌宠气泡里）
 
 PET_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WRAPPER_DIR=~/hermes11/gui-demo/bin   # termux-am wrapper（绕过 termux-app am.sock 未启用问题）
-SKIN="${2:-default}"                   # 皮肤名，可 pet-ctl.sh start 换肤名
+SKIN="${2:-qiki}"                   # 皮肤名，可 pet-ctl.sh start 换肤名（默认 qiki GIF 皮肤）
 RUN_LOG="$PET_DIR/pet-run.log"
 STATUS_FILE=~/hermes11/pet-status.txt
 

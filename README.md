@@ -5,6 +5,12 @@
 基于 termux-gui 的 overlay 悬浮窗实现，运行在 Android + Termux 环境：
 显示桌宠形象（呼吸动画帧循环），实时展示琪琪的当前任务状态，支持触摸互动。
 
+## 环境声明（Environment）
+
+本项目在 **MIUI 系统 + 小米 10 手机 + Termux（Android）** 环境下开发与验证。
+如果你在本地部署失败，可能与本地系统环境（系统版本、Android 权限、Termux 配置等）有关，而非项目本身的问题。
+此时可以让你的 AI Agent 查阅 **Android 官方文档**、**Termux 官方文档** 以及 **你所用系统的官方文档** 来排查解决。
+
 ## 功能特性
 
 - 🖼️ 悬浮窗桌宠：overlay 置顶显示，不遮挡操作
@@ -33,7 +39,7 @@
 
 # 2. 启动桌宠
 cd ~/hermes11/pet
-PATH=~/hermes11/gui-demo/bin:$PATH python3 pet.py --skin default
+PATH=~/hermes11/gui-demo/bin:$PATH python3 pet.py --skin qiki
 
 # 3. 更新状态（可选，会显示在气泡里）
 bash pet-status.sh "正在处理：xxx"
@@ -44,7 +50,7 @@ bash pet-status.sh
 ### 一键管理脚本（推荐）
 
 ```bash
-bash pet-ctl.sh start      # 启动桌宠
+bash pet-ctl.sh start      # 启动桌宠（默认 qiki GIF 皮肤）
 bash pet-ctl.sh stop       # 关闭桌宠
 bash pet-ctl.sh restart    # 重启桌宠
 bash pet-ctl.sh status     # 查看运行状态
@@ -91,9 +97,6 @@ pet/
 ├── pet.py              # 主程序（overlay 悬浮窗 + 触摸交互 + 动画）
 ├── pet-ctl.sh          # 一键管理脚本（start/stop/restart/status）
 ├── pet-status.sh       # 状态更新脚本
-├── skills/             # agent 交互技能（SKILL.md 标准格式）
-│   └── qiki-desktop-pet-agent/
-│       └── SKILL.md    # agent 配合协议：状态气泡 + 生命周期管理
 ├── skins/              # 皮肤目录
 │   ├── default/        # 默认皮肤（琪琪，PNG 帧呼吸动画）
 │   │   ├── normal_1.png / normal_2.png
@@ -139,31 +142,13 @@ bash pet-ctl.sh restart    # 重启
 bash pet-ctl.sh status     # 查看运行状态
 ```
 
-### agent 配合约定（技能已固化）
+### agent 配合约定
 
 - 长任务开始时先 `pet-status.sh "正在处理：xxx"`，结束或空闲后清除
 - 启动/关闭桌宠一律走 `pet-ctl.sh`，不要裸跑 `python3 pet.py &`
   （脚本会注入 wrapper PATH、防重复启动、stop 时清状态）
 - 状态文件位置：`~/hermes11/pet-status.txt`（桌宠硬编码轮询这个路径，
   修改需同步改 pet.py 的 STATUS_FILE）
-
-### Agent 交互 Skill（可直接给 agent 加载）
-
-仓库内置标准 Hermes skill，让任意 agent（琪琪/其他）快速学会怎么配合桌宠：
-
-```
-skills/qiki-desktop-pet-agent/SKILL.md
-```
-
-内容包括：
-- 状态更新协议（pet-status.sh 用法与规则）
-- 生命周期管理（pet-ctl.sh start/stop/restart/status）
-- 典型流程示例（start → 更新状态 → 干活 → 清状态）
-- 常见坑（裸跑 pet.py、忘清状态、改错状态文件路径等）
-
-给 agent 加载方式（Hermes）：把 skill 复制/链接到
-`~/.hermes/skills/` 下，或在 agent 提示词里引用本项目 README 的
-「配合 AI Agent 使用」章节即可。
 
 ## 技术路线
 
